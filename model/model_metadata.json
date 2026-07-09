@@ -1,0 +1,134 @@
+{
+  "dataset": "NASA C-MAPSS FD001 (Turbofan Engine Degradation Simulation)",
+  "dataset_note": "Real run-to-failure RUL label (no synthetic formula). RUL ceiling clipped at 125 cycles per standard C-MAPSS convention.",
+  "model_name": "RandomForest",
+  "features": [
+    "sensor_2",
+    "sensor_3",
+    "sensor_4",
+    "sensor_7",
+    "sensor_8",
+    "sensor_9",
+    "sensor_11",
+    "sensor_12",
+    "sensor_13",
+    "sensor_14",
+    "sensor_15",
+    "sensor_17",
+    "sensor_20",
+    "sensor_21"
+  ],
+  "rul_clip": 125,
+  "metrics": {
+    "test_r2": 0.8295172999411692,
+    "test_mae": 11.890401458004183,
+    "test_rmse": 16.546075889367984,
+    "nasa_score": 711.0917296558716,
+    "overfit_gap": 0.019883875022767672
+  },
+  "cv_r2_mean": 0.8057341293923841,
+  "cv_r2_std": 0.03280614743823772,
+  "all_models_test": [
+    {
+      "model": "RandomForest",
+      "r2": 0.8295,
+      "mae": 11.8904,
+      "rmse": 16.5461,
+      "nasa_score": 711.0917,
+      "train_r2": 0.8494,
+      "overfit_gap": 0.0199
+    },
+    {
+      "model": "XGBoost",
+      "r2": 0.8224,
+      "mae": 11.7125,
+      "rmse": 16.8879,
+      "nasa_score": 829.8239,
+      "train_r2": 0.832,
+      "overfit_gap": 0.0096
+    },
+    {
+      "model": "VotingEnsemble",
+      "r2": 0.8189,
+      "mae": 11.8121,
+      "rmse": 17.0527,
+      "nasa_score": 863.8975,
+      "train_r2": 0.8281,
+      "overfit_gap": 0.0092
+    },
+    {
+      "model": "ANN_MLP",
+      "r2": 0.8177,
+      "mae": 11.9194,
+      "rmse": 17.1108,
+      "nasa_score": 821.7888,
+      "train_r2": 0.8177,
+      "overfit_gap": 0.0
+    },
+    {
+      "model": "GradientBoosting",
+      "r2": 0.808,
+      "mae": 12.3271,
+      "rmse": 17.5589,
+      "nasa_score": 1005.0462,
+      "train_r2": 0.8272,
+      "overfit_gap": 0.0192
+    },
+    {
+      "model": "AdaBoost",
+      "r2": 0.7865,
+      "mae": 13.9522,
+      "rmse": 18.5163,
+      "nasa_score": 1066.2154,
+      "train_r2": 0.7759,
+      "overfit_gap": -0.0106
+    },
+    {
+      "model": "Baseline (Linear Regression)",
+      "r2": 0.7312,
+      "mae": 16.5908,
+      "rmse": 20.7764,
+      "nasa_score": 1235.6197,
+      "train_r2": 0.7275,
+      "overfit_gap": -0.0037
+    }
+  ],
+  "best_hyperparams": {
+    "XGBoost": {
+      "subsample": 0.7,
+      "reg_lambda": 2,
+      "reg_alpha": 0.5,
+      "n_estimators": 200,
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "colsample_bytree": 0.7
+    },
+    "GradientBoosting": {
+      "subsample": 0.7,
+      "n_estimators": 80,
+      "min_samples_leaf": 10,
+      "max_depth": 4,
+      "learning_rate": 0.08
+    },
+    "RandomForest": {
+      "n_estimators": 120,
+      "min_samples_leaf": 5,
+      "max_features": "sqrt",
+      "max_depth": 10
+    },
+    "AdaBoost": {
+      "n_estimators": 120,
+      "learning_rate": 0.05,
+      "estimator__max_depth": 4
+    },
+    "ANN_MLP": {
+      "learning_rate_init": 0.001,
+      "hidden_layer_sizes": [
+        64
+      ],
+      "alpha": 0.01
+    }
+  },
+  "train_engines": 100,
+  "test_engines": 100
+}

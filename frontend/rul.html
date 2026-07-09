@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Predict Remaining Useful Life (RUL) for open-pit mining equipment using a Random Forest model trained on real turbofan run-to-failure data, with per-prediction SHAP failure explanations.">
+<meta name="api-base-url" content="">
+<meta property="og:title" content="MineGuard — RUL Predictor">
+<meta property="og:description" content="AI-powered predictive maintenance for open-pit mining equipment.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b0f14'/%3E%3Cpath d='M50 20a30 30 0 1 0 .01 0z' fill='none' stroke='%23f0a500' stroke-width='8'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23f0a500'/%3E%3C/svg%3E">
+<title>MineGuard — RUL Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="config.js"></script>
+<style>
+
+/* ══════════════════════════════════════
+   Layout
+══════════════════════════════════════ */
+.main-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ══════════════════════════════════════
+   Panel
+══════════════════════════════════════ */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255,255,255,0.015);
+}
+.panel-title {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.panel-body { padding: 1.25rem; }
+
+/* ══════════════════════════════════════
+   Machine Selector — 6 cards 2×3 grid
+══════════════════════════════════════ */
+.machine-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+.machine-btn {
+  position: relative;
+  padding: 0.7rem 0.5rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-family: var(--font-head);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  line-height: 1.25;
+}
+.machine-btn .m-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+.machine-btn .m-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  display: block;
+  color: inherit;
+}
+.machine-btn .m-grade {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: block;
+  color: inherit;
+  opacity: 0.7;
+  margin-top: 1px;
+}
+.machine-btn .m-max {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: inherit;
+  opacity: 0.55;
+  display: block;
+  margin-top: 1px;
+}
+.machine-btn:hover:not(.active) {
+  border-color: rgba(240,165,0,0.4);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+.machine-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 4px 16px rgba(240,165,0,0.25);
+}
+.machine-btn.active .m-grade,
+.machine-btn.active .m-max { opacity: 0.7; }
+
+/* grade colour accent strip at top */
+.machine-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 5px 5px 0 0;
+  background: transparent;
+  transition: background 0.15s;
+}
+.machine-btn[data-grade="L"]::before { background: var(--ok); }
+.machine-btn[data-grade="M"]::before { background: var(--warning); }
+.machine-btn[data-grade="H"]::before { background: var(--danger); }
+.machine-btn.active::before { background: rgba(0,0,0,0.2); }
+
+/* ══════════════════════════════════════
+   Form
+══════════════════════════════════════ */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; }
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field.full { grid-column: 1 / -1; }
+.subgroup-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-top: 0.5rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+.field.full:first-child .subgroup-label { margin-top: 0; }
+
+label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input-wrap { position: relative; }
+
+input[type=number] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 0.6rem 2.8rem 0.6rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type=number]:focus   { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(240,165,0,0.1); }
+input[type=number].invalid { border-color: var(--danger); }
+input[type=number].valid   { border-color: var(--ok); }
+input::placeholder { color: var(--muted); opacity: 0.5; }
+
+.input-unit {
+  position: absolute;
+  right: 0.6rem; top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+.field-hint {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  min-height: 13px;
+}
+.field-hint.warn { color: var(--warning); }
+.field-hint.err  { color: var(--danger); }
+.field-hint.ok   { color: var(--ok); }
+
+/* ══════════════════════════════════════
+   Predict button
+══════════════════════════════════════ */
+.btn-predict {
+  width: 100%;
+  margin-top: 1.1rem;
+  padding: 1rem;
+  background: var(--accent);
+  border: none;
+  border-radius: 5px;
+  color: var(--bg);
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.btn-predict::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.4s;
+}
+.btn-predict:hover { opacity: 0.92; box-shadow: 0 4px 20px rgba(240,165,0,0.3); }
+.btn-predict:hover::after { transform: translateX(100%); }
+.btn-predict:active { transform: scale(0.99); }
+
+/* ══════════════════════════════════════
+   Error
+══════════════════════════════════════ */
+.error-msg {
+  display: none;
+  margin-top: 0.75rem;
+  background: rgba(232,65,42,0.08);
+  border: 1px solid rgba(232,65,42,0.3);
+  border-radius: 4px;
+  padding: 0.65rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--danger);
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════
+   Loading
+══════════════════════════════════════ */
+.loading-panel { display:none; text-align:center; padding:4rem 2rem; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 1rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  animation: pulse-text 1.2s ease-in-out infinite;
+}
+@keyframes pulse-text { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ══════════════════════════════════════
+   Results panel
+══════════════════════════════════════ */
+
+/* Machine identity strip */
+.machine-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.012);
+}
+.machine-strip-icon { font-size: 22px; line-height: 1; }
+.machine-strip-name {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.machine-strip-grade {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.machine-strip-maxhrs {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+/* Gauge */
+.gauge-container {
+  padding: 2rem 1rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.gauge-subtitle {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 0.35rem;
+}
+
+/* Scaled RUL display below gauge */
+.scaled-rul-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.85rem 1.5rem 0.95rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.012);
+}
+.scaled-block { text-align: center; }
+.scaled-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.scaled-value {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  transition: color 0.4s;
+}
+.scaled-value.risk-critical { color: var(--danger); animation: blink 1s infinite; }
+.scaled-value.risk-high     { color: var(--danger); }
+.scaled-value.risk-medium   { color: var(--warning); }
+.scaled-value.risk-low      { color: var(--ok); }
+.scaled-sep {
+  width: 1px; height: 40px;
+  background: var(--border);
+}
+
+/* Risk row */
+.risk-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.25rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.risk-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 2px;
+}
+.risk-low      { background:rgba(0,198,167,0.12); color:var(--ok);     border:1px solid rgba(0,198,167,0.3); }
+.risk-medium   { background:rgba(240,165,0,0.1);  color:var(--warning);border:1px solid rgba(240,165,0,0.3); }
+.risk-high     { background:rgba(232,65,42,0.1);  color:var(--danger); border:1px solid rgba(232,65,42,0.3); }
+.risk-critical { background:rgba(232,65,42,0.2);  color:var(--danger); border:1px solid var(--danger); animation:blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+.health-info {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.health-bar-wrap {
+  width: 80px; height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.health-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease, background 0.4s;
+}
+
+/* Failure reasons */
+.reasons-header {
+  padding: 0.8rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.reasons-label {
+  font-family: var(--font-head);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.shap-tag {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+}
+
+.reason-item {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 0.6rem;
+  align-items: start;
+}
+.reason-item:last-child { border-bottom: none; }
+.reason-rank { font-family:var(--font-mono); font-size:9px; color:var(--accent); padding-top:3px; font-weight:500; }
+.reason-text { font-size:13px; font-weight:500; margin-bottom:3px; line-height:1.3; }
+.reason-dir {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.5px;
+}
+.dir-reduces { background:rgba(232,65,42,0.1); color:var(--danger); border:1px solid rgba(232,65,42,0.2); }
+.dir-extends { background:rgba(0,198,167,0.1); color:var(--ok);    border:1px solid rgba(0,198,167,0.2); }
+.reason-impact {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  padding-top: 3px;
+  white-space: nowrap;
+}
+
+/* Computed row */
+.computed-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-top: 1px solid var(--border);
+}
+.computed-cell {
+  padding: 0.85rem 1rem;
+  border-right: 1px solid var(--border);
+}
+.computed-cell:last-child { border-right: none; }
+.computed-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.computed-value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--accent2);
+  font-weight: 500;
+}
+
+/* ══════════════════════════════════════
+   Placeholder
+══════════════════════════════════════ */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 2rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  gap: 0.75rem;
+}
+.placeholder-icon {
+  font-size: 48px;
+  opacity: 0.25;
+}
+.placeholder-rul {
+  font-family: var(--font-head);
+  font-size: 56px;
+  font-weight: 900;
+  color: var(--border);
+  letter-spacing: 6px;
+  line-height: 1;
+}
+.placeholder-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* ══════════════════════════════════════
+   History
+══════════════════════════════════════ */
+.history-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem 3rem;
+}
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0 1rem;
+  border-top: 1px solid var(--border);
+}
+.history-title {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.history-count { font-family:var(--font-mono); font-size:10px; color:var(--muted); }
+.history-table { width:100%; border-collapse:collapse; font-size:12px; }
+.history-table th {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.history-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid rgba(30,45,61,0.6);
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 11px;
+}
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tr:hover td { background: rgba(255,255,255,0.02); }
+.history-empty {
+  text-align: center;
+  padding: 2.5rem;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+}
+.rdot { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+.rdot-low      { background:var(--ok); }
+.rdot-medium   { background:var(--warning); }
+.rdot-high     { background:var(--danger); }
+.rdot-critical { background:var(--danger); }
+
+/* ══════════════════════════════════════
+   Responsive
+══════════════════════════════════════ */
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; padding: 1rem; }
+  .machine-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  .machine-grid { grid-template-columns: repeat(2, 1fr); }
+  .computed-row { grid-template-columns: 1fr 1fr; }
+  .scaled-rul-display { flex-wrap: wrap; gap: 1rem; }
+  .history-section { padding: 0 1rem 2rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="home.html" class="nav-logo">MINE<span>GUARD</span></a>
+  <a href="home.html" class="nav-link">Home</a>
+  <a href="rul.html" class="nav-link active">RUL Predictor</a>
+  <a href="explosivity.html" class="nav-link">Mine Air Analysis</a>
+  <a href="about.html" class="nav-link">About</a>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:0.5rem;font-family:var(--font-mono);font-size:10px;color:var(--muted)">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">CHECKING...</span>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-label">AI Prediction Engine · v5.0</div>
+    <div class="page-title">RUL Predictor</div>
+    <div class="page-sub">Select your machine, enter current engine sensor readings, and get real-world Remaining Useful Life scaled to your equipment type. Model trained on NASA C-MAPSS turbofan run-to-failure data — sensors are used as illustrative analogs since no public real-world mining-equipment RUL dataset exists.</div>
+  </div>
+</div>
+
+<div class="main-grid">
+
+  <!-- ══ Left: Input panel ══ -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Equipment Parameters</div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Machine selector -->
+        <div style="margin-bottom:1rem">
+          <label style="display:block;margin-bottom:0.5rem">Select Machine Type</label>
+          <div class="machine-grid">
+            <div class="machine-btn" data-machine="Scraper" data-grade="L" onclick="selectMachine('Scraper')">
+              <span class="m-icon">🔧</span>
+              <span class="m-name">Scraper</span>
+              <span class="m-grade">L · Light</span>
+              <span class="m-max">~25,000 hrs</span>
+            </div>
+            <div class="machine-btn" data-machine="Grader" data-grade="L" onclick="selectMachine('Grader')">
+              <span class="m-icon">🛤️</span>
+              <span class="m-name">Grader</span>
+              <span class="m-grade">L · Light</span>
+              <span class="m-max">~30,000 hrs</span>
+            </div>
+            <div class="machine-btn active" data-machine="Dozer" data-grade="M" onclick="selectMachine('Dozer')">
+              <span class="m-icon">🚜</span>
+              <span class="m-name">Dozer</span>
+              <span class="m-grade">M · Medium</span>
+              <span class="m-max">~40,000 hrs</span>
+            </div>
+            <div class="machine-btn" data-machine="Shovel" data-grade="M" onclick="selectMachine('Shovel')">
+              <span class="m-icon">🏗️</span>
+              <span class="m-name">Shovel</span>
+              <span class="m-grade">M · Medium</span>
+              <span class="m-max">~50,000 hrs</span>
+            </div>
+            <div class="machine-btn" data-machine="Dumper" data-grade="H" onclick="selectMachine('Dumper')">
+              <span class="m-icon">🚛</span>
+              <span class="m-name">Dumper</span>
+              <span class="m-grade">H · Heavy</span>
+              <span class="m-max">~40,000 hrs</span>
+            </div>
+            <div class="machine-btn" data-machine="Dragline" data-grade="H" onclick="selectMachine('Dragline')">
+              <span class="m-icon">⚙️</span>
+              <span class="m-name">Dragline</span>
+              <span class="m-grade">H · Heavy</span>
+              <span class="m-max">~120,000 hrs</span>
+            </div>
+          </div>
+          <input type="hidden" id="machine_type" value="Dozer">
+        </div>
+
+        <!-- Sensor inputs -->
+        <div class="form-grid">
+
+          <div class="field full"><div class="subgroup-label">Temperatures</div></div>
+
+          <div class="field">
+            <label for="sensor_2">LPC Outlet Temp (T24)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_2" placeholder="642.7" step="0.1"
+                     oninput="validateField(this,'sensor_2')" onchange="validateField(this,'sensor_2')" aria-describedby="hint-sensor_2">
+              <span class="input-unit">°R</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_2">Typical: 641.9–643.6 | Range: 640–646</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_3">HPC Outlet Temp (T30)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_3" placeholder="1590.5" step="0.1"
+                     oninput="validateField(this,'sensor_3')" onchange="validateField(this,'sensor_3')" aria-describedby="hint-sensor_3">
+              <span class="input-unit">°R</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_3">Typical: 1581.1–1601.5 | Range: 1568–1620</div>
+          </div>
+
+          <div class="field full">
+            <label for="sensor_4">LPT Outlet Temp (T50)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_4" placeholder="1408.9" step="0.1"
+                     oninput="validateField(this,'sensor_4')" onchange="validateField(this,'sensor_4')" aria-describedby="hint-sensor_4">
+              <span class="input-unit">°R</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_4">Typical: 1395.6–1425.7 | Range: 1378–1445</div>
+          </div>
+
+          <div class="field full"><div class="subgroup-label">Pressures</div></div>
+
+          <div class="field">
+            <label for="sensor_7">HPC Outlet Pressure (P30)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_7" placeholder="553.4" step="0.01"
+                     oninput="validateField(this,'sensor_7')" onchange="validateField(this,'sensor_7')" aria-describedby="hint-sensor_7">
+              <span class="input-unit">psia</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_7">Typical: 551.7–554.7 | Range: 548–558</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_11">HPC Static Pressure (Ps30)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_11" placeholder="47.54" step="0.01"
+                     oninput="validateField(this,'sensor_11')" onchange="validateField(this,'sensor_11')" aria-describedby="hint-sensor_11">
+              <span class="input-unit">psia</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_11">Typical: 47.15–48.05 | Range: 46.5–49</div>
+          </div>
+
+          <div class="field full"><div class="subgroup-label">Shaft Speeds</div></div>
+
+          <div class="field">
+            <label for="sensor_8">Physical Fan Speed (Nf)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_8" placeholder="2388.1" step="0.01"
+                     oninput="validateField(this,'sensor_8')" onchange="validateField(this,'sensor_8')" aria-describedby="hint-sensor_8">
+              <span class="input-unit">rpm</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_8">Typical: 2388.0–2388.2 | Range: 2387.5–2389</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_9">Physical Core Speed (Nc)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_9" placeholder="9065.2" step="0.1"
+                     oninput="validateField(this,'sensor_9')" onchange="validateField(this,'sensor_9')" aria-describedby="hint-sensor_9">
+              <span class="input-unit">rpm</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_9">Typical: 9042.6–9110.0 | Range: 9000–9260</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_13">Corrected Fan Speed (NRf)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_13" placeholder="2388.1" step="0.01"
+                     oninput="validateField(this,'sensor_13')" onchange="validateField(this,'sensor_13')" aria-describedby="hint-sensor_13">
+              <span class="input-unit">rpm</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_13">Typical: 2388.0–2388.2 | Range: 2387.5–2389</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_14">Corrected Core Speed (NRc)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_14" placeholder="8143.8" step="0.1"
+                     oninput="validateField(this,'sensor_14')" onchange="validateField(this,'sensor_14')" aria-describedby="hint-sensor_14">
+              <span class="input-unit">rpm</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_14">Typical: 8122.5–8181.4 | Range: 8080–8310</div>
+          </div>
+
+          <div class="field full"><div class="subgroup-label">Flow · Bleed · Ratios</div></div>
+
+          <div class="field">
+            <label for="sensor_12">Fuel Flow Ratio (phi)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_12" placeholder="521.4" step="0.01"
+                     oninput="validateField(this,'sensor_12')" onchange="validateField(this,'sensor_12')" aria-describedby="hint-sensor_12">
+              <span class="input-unit">pps/psi</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_12">Typical: 520.0–522.5 | Range: 517–525</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_15">Bypass Ratio (BPR)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_15" placeholder="8.44" step="0.001"
+                     oninput="validateField(this,'sensor_15')" onchange="validateField(this,'sensor_15')" aria-describedby="hint-sensor_15">
+              <span class="input-unit">ratio</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_15">Typical: 8.386–8.511 | Range: 8.2–8.7</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_17">Bleed Enthalpy (htBleed)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_17" placeholder="393" step="1"
+                     oninput="validateField(this,'sensor_17')" onchange="validateField(this,'sensor_17')" aria-describedby="hint-sensor_17">
+              <span class="input-unit">—</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_17">Typical: 391–396 | Range: 386–402</div>
+          </div>
+
+          <div class="field">
+            <label for="sensor_20">HPT Coolant Bleed (W31)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_20" placeholder="38.82" step="0.01"
+                     oninput="validateField(this,'sensor_20')" onchange="validateField(this,'sensor_20')" aria-describedby="hint-sensor_20">
+              <span class="input-unit">lbm/s</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_20">Typical: 38.49–39.09 | Range: 37.9–39.7</div>
+          </div>
+
+          <div class="field full">
+            <label for="sensor_21">LPT Coolant Bleed (W32)</label>
+            <div class="input-wrap">
+              <input type="number" id="sensor_21" placeholder="23.29" step="0.001"
+                     oninput="validateField(this,'sensor_21')" onchange="validateField(this,'sensor_21')" aria-describedby="hint-sensor_21">
+              <span class="input-unit">lbm/s</span>
+            </div>
+            <div class="field-hint" id="hint-sensor_21">Typical: 23.09–23.45 | Range: 22.7–23.8</div>
+          </div>
+
+        </div>
+
+        <div style="display:flex; gap:0.5rem; margin-top:1.1rem">
+          <button class="btn-predict" style="margin-top:0; flex:1" onclick="predict()">⚡ PREDICT RUL</button>
+          <button class="btn-outline" style="padding:1rem 1.1rem; font-size:12px; letter-spacing:1px; white-space:nowrap" onclick="loadExampleValues()" title="Fill all fields with a realistic sample reading">📋 EXAMPLE</button>
+        </div>
+        <div class="error-msg" id="error-msg"></div>
+
+      </div>
+    </div>
+
+    <div style="margin-top:0.75rem;font-family:var(--font-mono);font-size:9px;color:var(--muted);text-align:center;letter-spacing:0.5px;line-height:1.6">
+      RandomForest (tuned via RandomizedSearchCV + GroupKFold) · SHAP per-sample · NASA C-MAPSS FD001<br>
+      <span style="color:rgba(85,96,112,0.6)">Health % scaled to machine real-world service life</span>
+    </div>
+  </div>
+
+  <!-- ══ Right: Results ══ -->
+  <div id="right-col">
+
+    <div class="panel loading-panel" id="loading-panel">
+      <div class="spinner"></div>
+      <div class="loading-text">RUNNING INFERENCE...</div>
+    </div>
+
+    <div class="panel" id="results-panel" style="display:none">
+
+      <!-- Machine identity strip -->
+      <div class="machine-strip">
+        <span class="machine-strip-icon" id="res-icon">—</span>
+        <div>
+          <div class="machine-strip-name" id="res-machine-name">—</div>
+          <div class="machine-strip-grade" id="res-grade">—</div>
+        </div>
+        <div class="machine-strip-maxhrs" id="res-maxhrs">MAX: —</div>
+      </div>
+
+      <!-- Semicircular gauge (shows health %) -->
+      <div class="gauge-container">
+        <svg width="280" height="155" viewBox="0 0 280 155" style="overflow:visible">
+          <path d="M 30 135 A 110 110 0 0 1 250 135"
+            fill="none" stroke="#1e2d3d" stroke-width="14" stroke-linecap="round"/>
+          <path id="gauge-fill"
+            d="M 30 135 A 110 110 0 0 1 250 135"
+            fill="none" stroke="#f0a500" stroke-width="14" stroke-linecap="round"
+            stroke-dasharray="345" stroke-dashoffset="345"
+            style="transition: stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1), stroke 0.4s ease"/>
+          <text x="14"  y="148" font-family="JetBrains Mono,monospace" font-size="8" fill="#556070" text-anchor="middle">0%</text>
+          <text x="266" y="148" font-family="JetBrains Mono,monospace" font-size="8" fill="#556070" text-anchor="middle">100%</text>
+          <text id="gauge-pct-value" x="140" y="118"
+            font-family="Barlow Condensed,sans-serif" font-size="54" font-weight="700"
+            fill="#d4dfe9" text-anchor="middle"
+            style="transition:fill 0.4s">—</text>
+          <text x="140" y="138"
+            font-family="JetBrains Mono,monospace" font-size="9"
+            fill="#556070" text-anchor="middle" letter-spacing="2">HEALTH INDEX</text>
+        </svg>
+      </div>
+
+      <!-- Scaled RUL display -->
+      <div class="scaled-rul-display">
+        <div class="scaled-block">
+          <div class="scaled-label">Remaining Useful Life</div>
+          <div class="scaled-value" id="res-scaled-rul">—</div>
+        </div>
+        <div class="scaled-sep"></div>
+        <div class="scaled-block">
+          <div class="scaled-label">Predicted RUL (model raw)</div>
+          <div class="scaled-value" id="res-raw-rul" style="font-size:20px;color:var(--muted)">—</div>
+        </div>
+        <div class="scaled-sep"></div>
+        <div class="scaled-block">
+          <div class="scaled-label">Max Service Life</div>
+          <div class="scaled-value" id="res-max-life" style="font-size:20px;color:var(--muted)">—</div>
+        </div>
+      </div>
+
+      <!-- Risk badge + health bar -->
+      <div class="risk-row">
+        <span class="risk-badge" id="risk-badge">—</span>
+        <div class="health-info">
+          <div class="health-bar-wrap">
+            <div class="health-bar-fill" id="health-bar" style="width:0%;background:var(--ok)"></div>
+          </div>
+          <span id="health-val">—</span>% health
+        </div>
+      </div>
+
+      <!-- Failure reasons -->
+      <div class="reasons-header">
+        <span class="reasons-label">Top Failure Drivers</span>
+        <span class="shap-tag">SHAP · PER SAMPLE</span>
+      </div>
+      <div id="reasons-section"></div>
+
+      <!-- Computed values -->
+      <div class="computed-row">
+        <div class="computed-cell">
+          <div class="computed-label">Temp Rise (T50−T24)</div>
+          <div class="computed-value" id="c-tempdiff">—</div>
+        </div>
+        <div class="computed-cell">
+          <div class="computed-label">Core/Fan Speed Ratio</div>
+          <div class="computed-value" id="c-speedratio">—</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Placeholder -->
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-icon">⛏️</div>
+      <div class="placeholder-rul">RUL</div>
+      <div class="placeholder-sub">Select machine · Enter parameters · Predict</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- History -->
+<div class="history-section">
+  <div class="history-header">
+    <div class="history-title">Prediction History</div>
+    <div class="history-count" id="history-count"></div>
+  </div>
+  <div class="panel" style="overflow:hidden">
+    <div id="history-container">
+      <div class="history-empty">No predictions yet — run your first prediction above.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">MINE<span>GUARD</span></div>
+    <div class="footer-links">
+      <a href="home.html">Home</a>
+      <a href="rul.html">RUL Predictor</a>
+      <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">NASA C-MAPSS FD001 · Real turbofan run-to-failure data · RUL scaled to real-world machine service life</div>
+  </div>
+</footer>
+
+<script>
+const API = window.MINEGUARD_API_URL || 'http://localhost:5000';
+
+// ── Machine catalogue (mirrors backend) ──────────────────────────────────────
+const MACHINES = {
+  Scraper : { grade:'L', label:'Light',  maxHours:25000,  icon:'🔧' },
+  Grader  : { grade:'L', label:'Light',  maxHours:30000,  icon:'🛤️' },
+  Dozer   : { grade:'M', label:'Medium', maxHours:40000,  icon:'🚜' },
+  Shovel  : { grade:'M', label:'Medium', maxHours:50000,  icon:'🏗️' },
+  Dumper  : { grade:'H', label:'Heavy',  maxHours:40000,  icon:'🚛' },
+  Dragline: { grade:'H', label:'Heavy',  maxHours:120000, icon:'⚙️' },
+};
+
+const MODEL_MAX = 125;  // FD001 standard clipped RUL ceiling (cycles)
+
+const colorMap = {
+  low     : 'var(--ok)',
+  medium  : 'var(--warning)',
+  high    : 'var(--danger)',
+  critical: 'var(--danger)',
+};
+
+let selectedMachine = 'Dozer';
+let localHistory    = [];
+
+// Validation config — bounds derived from the real FD001 training distribution
+// (see model/train_model.ipynb Step 4), not arbitrary guesses.
+const FIELD_CONFIG = {
+  sensor_2:  { min:640,    max:646,    warnAbove:643.6,  unit:'°R',     label:'LPC Outlet Temp (T24)' },
+  sensor_3:  { min:1568,   max:1620,   warnAbove:1601.5, unit:'°R',     label:'HPC Outlet Temp (T30)' },
+  sensor_4:  { min:1378,   max:1445,   warnAbove:1425.7, unit:'°R',     label:'LPT Outlet Temp (T50)' },
+  sensor_7:  { min:548,    max:558,    warnAbove:554.7,  unit:'psia',   label:'HPC Outlet Pressure (P30)' },
+  sensor_11: { min:46.5,   max:49,     warnAbove:48.05,  unit:'psia',   label:'HPC Static Pressure (Ps30)' },
+  sensor_8:  { min:2387.5, max:2389,   warnAbove:2388.22,unit:'rpm',    label:'Physical Fan Speed (Nf)' },
+  sensor_9:  { min:9000,   max:9260,   warnAbove:9110,   unit:'rpm',    label:'Physical Core Speed (Nc)' },
+  sensor_13: { min:2387.5, max:2389,   warnAbove:2388.23,unit:'rpm',    label:'Corrected Fan Speed (NRf)' },
+  sensor_14: { min:8080,   max:8310,   warnAbove:8181.4, unit:'rpm',    label:'Corrected Core Speed (NRc)' },
+  sensor_12: { min:517,    max:525,    warnAbove:522.5,  unit:'pps/psi',label:'Fuel Flow Ratio (phi)' },
+  sensor_15: { min:8.2,    max:8.7,    warnAbove:8.511,  unit:'ratio',  label:'Bypass Ratio (BPR)' },
+  sensor_17: { min:386,    max:402,    warnAbove:396,    unit:'—',      label:'Bleed Enthalpy (htBleed)' },
+  sensor_20: { min:37.9,   max:39.7,   warnAbove:39.09,  unit:'lbm/s',  label:'HPT Coolant Bleed (W31)' },
+  sensor_21: { min:22.7,   max:23.8,   warnAbove:23.454, unit:'lbm/s',  label:'LPT Coolant Bleed (W32)' },
+};
+
+// ── Status check ──────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      document.getElementById('status-dot').style.background  = 'var(--ok)';
+      document.getElementById('status-text').textContent = 'MODEL ONLINE';
+    } else throw new Error();
+  } catch {
+    document.getElementById('status-dot').style.background  = 'var(--danger)';
+    document.getElementById('status-text').textContent = 'BACKEND OFFLINE';
+  }
+}
+checkStatus();
+setInterval(checkStatus, 30000);
+
+// ── Machine selection ─────────────────────────────────────────────────────────
+function selectMachine(name) {
+  selectedMachine = name;
+  document.getElementById('machine_type').value = name;
+  document.querySelectorAll('.machine-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.machine === name)
+  );
+}
+
+// ── Example values (a realistic mid-life FD001 sensor snapshot) ───────────────
+const EXAMPLE_VALUES = {
+  sensor_2: 642.7, sensor_3: 1590.5, sensor_4: 1408.9,
+  sensor_7: 553.4, sensor_11: 47.54,
+  sensor_8: 2388.1, sensor_9: 9065.2, sensor_13: 2388.1, sensor_14: 8143.8,
+  sensor_12: 521.4, sensor_15: 8.44, sensor_17: 393, sensor_20: 38.82, sensor_21: 23.29,
+};
+function loadExampleValues() {
+  hideError();
+  for (const [fieldId, val] of Object.entries(EXAMPLE_VALUES)) {
+    const input = document.getElementById(fieldId);
+    if (!input) continue;
+    input.value = val;
+    validateField(input, fieldId);
+  }
+}
+
+// ── Field validation ──────────────────────────────────────────────────────────
+function validateField(input, fieldId) {
+  const cfg  = FIELD_CONFIG[fieldId];
+  const hint = document.getElementById(`hint-${fieldId}`);
+  const val  = parseFloat(input.value);
+
+  if (input.value === '' || isNaN(val)) {
+    input.className  = '';
+    hint.className   = 'field-hint';
+    hint.textContent = `Typical: — | Range: ${cfg.min} to ${cfg.max} ${cfg.unit}`;
+    return false;
+  }
+  if (val < cfg.min || val > cfg.max) {
+    input.className  = 'invalid';
+    hint.className   = 'field-hint err';
+    hint.textContent = `⚠ Out of range (${cfg.min}–${cfg.max} ${cfg.unit})`;
+    return false;
+  }
+  if (cfg.warnAbove && val > cfg.warnAbove) {
+    input.className  = 'valid';
+    hint.className   = 'field-hint warn';
+    hint.textContent = '⚡ High value — verify sensor reading';
+    return true;
+  }
+  input.className  = 'valid';
+  hint.className   = 'field-hint ok';
+  hint.textContent = '✓ Valid';
+  return true;
+}
+
+// ── Error display ─────────────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent   = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+// ── Predict ───────────────────────────────────────────────────────────────────
+async function predict() {
+  hideError();
+
+  const payload = { machine_type: selectedMachine };
+  for (const fieldId of Object.keys(FIELD_CONFIG)) {
+    const input = document.getElementById(fieldId);
+    const val   = parseFloat(input.value);
+    const cfg   = FIELD_CONFIG[fieldId];
+
+    if (input.value === '' || isNaN(val)) {
+      showError(`Please fill in all fields. Missing: ${cfg.label}`);
+      input.className = 'invalid';
+      return;
+    }
+    if (val < cfg.min || val > cfg.max) {
+      showError(`${cfg.label} must be between ${cfg.min} and ${cfg.max} ${cfg.unit}`);
+      input.className = 'invalid';
+      return;
+    }
+    payload[fieldId] = val;
+  }
+
+  document.getElementById('loading-panel').style.display  = 'block';
+  document.getElementById('results-panel').style.display  = 'none';
+  document.getElementById('placeholder').style.display    = 'none';
+
+  try {
+    const res  = await fetch(`${API}/predict`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.detail || data.error || `Server error ${res.status}`);
+
+    renderResults(data);
+    addToLocalHistory(data);
+    loadHistory();
+
+  } catch (err) {
+    let msg = err.message;
+    if (msg.toLowerCase().includes('fetch') || msg.toLowerCase().includes('failed'))
+      msg += ' — Is the backend running? Run: uvicorn app_v4:app --reload --port 5000';
+    showError(msg);
+    document.getElementById('placeholder').style.display = 'block';
+  } finally {
+    document.getElementById('loading-panel').style.display = 'none';
+  }
+}
+
+// ── Render results ────────────────────────────────────────────────────────────
+function renderResults(data) {
+  const risk       = data.risk_level || 'low';
+  const color      = colorMap[risk] || 'var(--text)';
+  const healthPct  = typeof data.health_pct === 'number' ? data.health_pct : parseFloat(data.health_pct) || 0;
+  const scaledRul  = typeof data.rul_hours  === 'number' ? data.rul_hours  : parseFloat(data.rul_hours)  || 0;
+  const rawRul     = typeof data.raw_rul_cycles === 'number' ? data.raw_rul_cycles : parseFloat(data.raw_rul_cycles) || 0;
+  const machInfo   = data.machine || {};
+
+  // Machine identity strip
+  document.getElementById('res-icon').textContent         = machInfo.icon || '⚙️';
+  document.getElementById('res-machine-name').textContent = machInfo.type || selectedMachine;
+  document.getElementById('res-grade').textContent        = `${machInfo.grade || '—'} · ${machInfo.grade_label || '—'} Class`;
+  document.getElementById('res-maxhrs').textContent       = `MAX: ${(machInfo.max_hours||0).toLocaleString()} HRS`;
+
+  // Semicircular gauge — health %
+  const arcLen = 345;
+  const pct    = Math.min(1, healthPct / 100);
+  const offset = arcLen * (1 - pct);
+  const gaugeFill = document.getElementById('gauge-fill');
+  gaugeFill.style.strokeDashoffset = offset;
+  gaugeFill.style.stroke           = color;
+
+  const pctText = document.getElementById('gauge-pct-value');
+  pctText.textContent = healthPct.toFixed(1) + '%';
+  pctText.setAttribute('fill', color);
+
+  // Scaled RUL display
+  const scaledEl = document.getElementById('res-scaled-rul');
+  scaledEl.textContent = scaledRul.toLocaleString() + ' hrs';
+  scaledEl.className   = `scaled-value risk-${risk}`;
+
+  document.getElementById('res-raw-rul').textContent  = rawRul.toFixed(1) + ' / 125 cycles';
+  document.getElementById('res-max-life').textContent = (machInfo.max_hours||0).toLocaleString() + ' hrs';
+
+  // Risk badge
+  const badge = document.getElementById('risk-badge');
+  badge.textContent = risk.toUpperCase();
+  badge.className   = `risk-badge risk-${risk}`;
+
+  // Health bar
+  document.getElementById('health-val').textContent   = healthPct.toFixed(1);
+  const bar = document.getElementById('health-bar');
+  bar.style.width      = healthPct + '%';
+  bar.style.background = color;
+
+  // Failure reasons
+  const section = document.getElementById('reasons-section');
+  section.innerHTML = '';
+  (data.failure_reasons || []).forEach((r, i) => {
+    const impact    = r.contribution ?? r.importance ?? 0;
+    const isReduces = (r.direction || '').includes('reduces');
+    const icon      = r.direction_icon || (isReduces ? '↓' : '↑');
+
+    section.innerHTML += `
+      <div class="reason-item">
+        <div class="reason-rank">#${i + 1}</div>
+        <div class="reason-body">
+          <div class="reason-text">${r.reason}</div>
+          <span class="reason-dir ${isReduces ? 'dir-reduces' : 'dir-extends'}">
+            ${icon} ${r.direction || ''}
+          </span>
+        </div>
+        <div class="reason-impact">${Number(impact).toFixed(1)} pts</div>
+      </div>`;
+  });
+
+  // Computed derived (display only — not model inputs)
+  const c = data.computed || {};
+  document.getElementById('c-tempdiff').textContent =
+    c.temp_rise != null ? (c.temp_rise >= 0 ? '+' : '') + Number(c.temp_rise).toFixed(1) + ' °R' : '—';
+  document.getElementById('c-speedratio').textContent =
+    c.speed_ratio != null ? Number(c.speed_ratio).toFixed(3) : '—';
+
+  document.getElementById('results-panel').style.display = 'block';
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function addToLocalHistory(data) {
+  localHistory.unshift({
+    timestamp      : new Date().toLocaleTimeString(),
+    machine_type   : data.machine?.type || selectedMachine,
+    raw_rul_cycles : (data.raw_rul_cycles ?? 0).toFixed(1),
+    health_pct     : (data.health_pct || 0).toFixed(1),
+    rul_scaled_hrs : (data.rul_hours || 0).toLocaleString(),
+    risk_level     : data.risk_level || 'low',
+  });
+  if (localHistory.length > 10) localHistory.pop();
+}
+
+function loadHistory() {
+  fetch(`${API}/history`)
+    .then(r => r.json())
+    .then(d => renderHistory(d.predictions || [], d.total || 0))
+    .catch(() => renderHistory(localHistory, localHistory.length));
+}
+
+function renderHistory(rows, total) {
+  const container = document.getElementById('history-container');
+  const countEl   = document.getElementById('history-count');
+
+  if (!rows || rows.length === 0) {
+    container.innerHTML = '<div class="history-empty">No predictions yet — run your first prediction above.</div>';
+    countEl.textContent  = '';
+    return;
+  }
+
+  countEl.textContent = `${total} total prediction${total !== 1 ? 's' : ''}`;
+
+  const rows_html = rows.map(r => {
+    const risk       = r.risk_level   || 'low';
+    const scaledHrs  = r.rul_scaled_hrs != null
+      ? Number(r.rul_scaled_hrs).toLocaleString() + ' hrs'
+      : (r.rul_predicted != null ? Number(r.rul_predicted).toFixed(1) + ' hrs' : '—');
+    const healthStr  = r.health_pct != null ? Number(r.health_pct).toFixed(1) + '%' : '—';
+    const machine    = r.machine_type || '—';
+    const rawRul     = r.raw_rul_cycles ?? '—';
+    const ts         = r.timestamp   || '—';
+
+    return `<tr>
+      <td>${ts}</td>
+      <td><strong>${machine}</strong></td>
+      <td>${rawRul} cycles</td>
+      <td style="color:${colorMap[risk]};font-weight:500">${scaledHrs}</td>
+      <td>${healthStr}</td>
+      <td><span class="rdot rdot-${risk}"></span>${risk.toUpperCase()}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <table class="history-table">
+      <thead><tr>
+        <th>Time</th>
+        <th>Machine</th>
+        <th>Raw RUL</th>
+        <th>Scaled RUL</th>
+        <th>Health %</th>
+        <th>Risk</th>
+      </tr></thead>
+      <tbody>${rows_html}</tbody>
+    </table>`;
+}
+
+loadHistory();
+</script>
+</body>
+</html>

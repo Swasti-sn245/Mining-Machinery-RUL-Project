@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MineGuard — AI-powered predictive maintenance dashboard for open-pit mining equipment, predicting Remaining Useful Life with SHAP-explained failure diagnosis.">
+<meta name="api-base-url" content="">
+<meta property="og:title" content="MineGuard — AI Predictive Maintenance for Mining">
+<meta property="og:description" content="Predict equipment failure before it happens.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b0f14'/%3E%3Cpath d='M50 20a30 30 0 1 0 .01 0z' fill='none' stroke='%23f0a500' stroke-width='8'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23f0a500'/%3E%3C/svg%3E">
+<title>MineGuard — AI Predictive Maintenance for Mining</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="config.js"></script>
+<style>
+/* ── Hero ── */
+.hero {
+  min-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 40%, rgba(240,165,0,0.06) 0%, transparent 70%),
+    repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(30,45,61,0.25) 40px, rgba(30,45,61,0.25) 41px),
+    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(30,45,61,0.25) 40px, rgba(30,45,61,0.25) 41px);
+  pointer-events: none;
+}
+.hero-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  padding: 6px 18px;
+  border: 1px solid rgba(240,165,0,0.3);
+  border-radius: 2px;
+  display: inline-block;
+  position: relative;
+}
+.hero-title {
+  font-family: var(--font-head);
+  font-size: clamp(52px, 9vw, 100px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -1px;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.hero-title .accent { color: var(--accent); }
+.hero-subtitle {
+  font-size: 17px;
+  font-weight: 300;
+  color: var(--muted);
+  max-width: 520px;
+  line-height: 1.75;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+}
+
+/* ── Stats strip ── */
+.stats-strip {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 4rem;
+  flex-wrap: wrap;
+}
+.stat-item { text-align: center; }
+.stat-num {
+  font-family: var(--font-head);
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.stat-desc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ── Feature cards ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.25rem;
+}
+.feature-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.75rem;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s;
+}
+.feature-card:hover { border-color: rgba(240,165,0,0.3); transform: translateY(-2px); }
+.feature-card:hover::after { transform: scaleX(1); }
+.feature-icon { font-size: 28px; margin-bottom: 1rem; }
+.feature-title {
+  font-family: var(--font-head);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+.feature-desc { font-size: 13px; color: var(--muted); line-height: 1.65; }
+.feature-badge {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+.badge-live  { background:rgba(240,165,0,0.1);  color:var(--accent); border:1px solid rgba(240,165,0,0.25); }
+.badge-soon  { background:rgba(85,96,112,0.15); color:var(--muted);  border:1px solid var(--border); }
+
+/* ── How it works ── */
+.how-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.how-step { padding: 2rem 1.5rem; text-align: center; position: relative; }
+.how-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -10px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: var(--border);
+  font-family: var(--font-mono);
+}
+.step-num {
+  font-family: var(--font-head);
+  font-size: 52px;
+  font-weight: 700;
+  color: rgba(240,165,0,0.15);
+  line-height: 1;
+  margin-bottom: 0.75rem;
+}
+.step-title {
+  font-family: var(--font-head);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+.step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ── Equipment grid ── */
+.equipment-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1rem;
+}
+.equip-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.equip-card:hover { border-color: rgba(240,165,0,0.3); }
+.equip-icon { font-size: 30px; margin-bottom: 0.5rem; }
+.equip-name {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.2rem;
+}
+.equip-type {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ── Tech pills ── */
+.tech-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.tech-pill {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.tech-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+
+/* ── CTA section ── */
+.cta-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  padding: 5rem 2rem;
+}
+.cta-title {
+  font-family: var(--font-head);
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+.cta-sub { color: var(--muted); font-size: 15px; margin-bottom: 2rem; }
+
+@media (max-width: 900px) {
+  .equipment-grid { grid-template-columns: repeat(3, 1fr); }
+  .how-grid { grid-template-columns: repeat(2, 1fr); }
+  .how-step::after { display: none; }
+}
+@media (max-width: 600px) {
+  .equipment-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-strip { gap: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="home.html" class="nav-logo">MINE<span>GUARD</span></a>
+  <a href="home.html"  class="nav-link active">Home</a>
+  <a href="rul.html" class="nav-link">RUL Predictor</a>
+  <a href="explosivity.html" class="nav-link">Mine Air Analysis</a>
+  <a href="about.html" class="nav-link">About</a>
+  <a href="rul.html" class="nav-cta">Launch App →</a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-tag">⛏ AI-Powered Predictive Maintenance</div>
+  <h1 class="hero-title">
+    Predict Failure.<br>
+    <span class="accent">Before It Happens.</span>
+  </h1>
+  <p class="hero-subtitle">
+    MineGuard uses machine learning to estimate the Remaining Useful Life of open-pit mining machinery — giving maintenance teams advance warning before critical equipment failures.
+  </p>
+  <div class="hero-cta">
+    <a href="rul.html" class="btn-primary">Try RUL Predictor</a>
+    <a href="about.html" class="btn-outline">How It Works</a>
+  </div>
+</section>
+
+<!-- ── Stats strip ── -->
+<div class="stats-strip">
+  <div class="stat-item">
+    <div class="stat-num">6</div>
+    <div class="stat-desc">Equipment Types</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-r2">—</div>
+    <div class="stat-desc">Model R² Score</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" id="stat-mae">—</div>
+    <div class="stat-desc">Avg Error (hrs)</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">12</div>
+    <div class="stat-desc">Input Features</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">20K</div>
+    <div class="stat-desc">Training Samples</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">SHAP</div>
+    <div class="stat-desc">Explainability</div>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section class="section">
+  <div class="section-label">Capabilities</div>
+  <h2 class="section-title">Built to predict.<br>Designed to explain.</h2>
+  <p class="section-sub">Three live features today. Three more on the roadmap as the project grows.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">⏱</div>
+      <div class="feature-title">RUL PREDICTION</div>
+      <div class="feature-desc">Enter engine sensor readings and get an instant prediction of remaining useful life — powered by a Random Forest tuned via RandomizedSearchCV, trained on real NASA turbofan run-to-failure data.</div>
+      <span class="feature-badge badge-live">Live</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔍</div>
+      <div class="feature-title">SHAP FAILURE DIAGNOSIS</div>
+      <div class="feature-desc">SHAP values identify the top 3 failure drivers unique to each prediction. Unlike global feature importances, reasons genuinely change per machine condition.</div>
+      <span class="feature-badge badge-live">Live</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">PREDICTION HISTORY</div>
+      <div class="feature-desc">Every prediction is logged with timestamp and inputs. Track how a machine's health evolves and compare readings over time.</div>
+      <span class="feature-badge badge-live">Live</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🚛</div>
+      <div class="feature-title">FLEET OVERVIEW</div>
+      <div class="feature-desc">Monitor your entire fleet on one screen. Sort by risk level, filter by equipment type, and prioritise maintenance across all machines.</div>
+      <span class="feature-badge badge-soon">Coming Soon</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📡</div>
+      <div class="feature-title">LIVE SENSOR FEED</div>
+      <div class="feature-desc">Connect to real OBD/CAN bus telemetry from NCL Nigahi Project equipment. Continuous monitoring with automatic alerts when RUL drops below threshold.</div>
+      <span class="feature-badge badge-soon">Future Scope</span>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧩</div>
+      <div class="feature-title">DIGITAL TWIN</div>
+      <div class="feature-desc">Simulate maintenance scenarios: "If I delay service by 3 days, what is the failure risk?" Physics-informed model layered on ML predictions.</div>
+      <span class="feature-badge badge-soon">Future Scope</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── How it works ── -->
+<section class="section">
+  <div class="section-label">Process</div>
+  <h2 class="section-title">How it works.</h2>
+  <p class="section-sub">From sensor readings to actionable maintenance decision in under a second.</p>
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="step-num">01</div>
+      <div class="step-title">INPUT PARAMETERS</div>
+      <div class="step-desc">Enter 14 engine sensor readings — temperatures, pressures, shaft speeds, and flow/bleed ratios — from the machine's current operational state.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">02</div>
+      <div class="step-title">ML INFERENCE</div>
+      <div class="step-desc">A Random Forest, tuned via RandomizedSearchCV and validated with GroupKFold, predicts remaining cycles from the 14 sensor readings.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">03</div>
+      <div class="step-title">SHAP EXPLANATION</div>
+      <div class="step-desc">Per-sample SHAP values rank which specific factors are driving this machine's degradation right now.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">04</div>
+      <div class="step-title">ACT ON INSIGHT</div>
+      <div class="step-desc">Schedule maintenance before failure. Reduce unplanned downtime, extend equipment life, and cut costs.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Equipment ── -->
+<section class="section">
+  <div class="section-label">Equipment Coverage</div>
+  <h2 class="section-title">Built for open-pit<br>mining machinery.</h2>
+  <p class="section-sub">Currently covers transportation and earthmoving equipment. Drilling machinery planned for the next phase.</p>
+  <div class="equipment-grid">
+    <div class="equip-card"><div class="equip-icon">🚛</div><div class="equip-name">DUMPER</div><div class="equip-type">H — Heavy</div></div>
+    <div class="equip-card"><div class="equip-icon">🏗</div><div class="equip-name">SHOVEL</div><div class="equip-type">M — Medium</div></div>
+    <div class="equip-card"><div class="equip-icon">⚙️</div><div class="equip-name">DRAGLINE</div><div class="equip-type">H — Heavy</div></div>
+    <div class="equip-card"><div class="equip-icon">🚜</div><div class="equip-name">DOZER</div><div class="equip-type">M — Medium</div></div>
+    <div class="equip-card"><div class="equip-icon">🔧</div><div class="equip-name">SCRAPER</div><div class="equip-type">L — Light</div></div>
+    <div class="equip-card"><div class="equip-icon">🛤</div><div class="equip-name">GRADER</div><div class="equip-type">L — Light</div></div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── Tech stack ── -->
+<section class="section">
+  <div class="section-label">Tech Stack</div>
+  <h2 class="section-title">All open source.<br>Zero paid APIs.</h2>
+  <p class="section-sub">Runs locally, deploys free. Every tool in this stack is accessible to anyone.</p>
+  <div class="tech-grid">
+    <div class="tech-pill"><span class="dot"></span>Python 3.12</div>
+    <div class="tech-pill"><span class="dot"></span>Random Forest</div>
+    <div class="tech-pill"><span class="dot"></span>XGBoost</div>
+    <div class="tech-pill"><span class="dot"></span>RandomizedSearchCV</div>
+    <div class="tech-pill"><span class="dot"></span>GroupKFold CV</div>
+    <div class="tech-pill"><span class="dot"></span>SHAP Explainability</div>
+    <div class="tech-pill"><span class="dot"></span>FastAPI REST API</div>
+    <div class="tech-pill"><span class="dot"></span>scikit-learn</div>
+    <div class="tech-pill"><span class="dot"></span>pandas + numpy</div>
+    <div class="tech-pill"><span class="dot"></span>HTML / CSS / Vanilla JS</div>
+    <div class="tech-pill"><span class="dot"></span>NASA C-MAPSS FD001</div>
+    <div class="tech-pill"><span class="dot"></span>Render + Vercel (free)</div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<div class="cta-section">
+  <h2 class="cta-title">Ready to predict your first failure?</h2>
+  <p class="cta-sub">Enter equipment parameters and get an instant RUL estimate with SHAP failure diagnosis.</p>
+  <a href="rul.html" class="btn-primary">Launch RUL Predictor</a>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">MINE<span>GUARD</span></div>
+    <div class="footer-links">
+      <a href="home.html">Home</a>
+      <a href="rul.html">RUL Predictor</a>
+      <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">NASA C-MAPSS FD001 · Real turbofan run-to-failure data · Sensors used as analogs for mining equipment</div>
+  </div>
+</footer>
+
+<script>
+  // Load live metrics from backend into stats strip
+  const API = window.MINEGUARD_API_URL || 'http://localhost:5000';
+  fetch(`${API}/models`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.metrics) {
+        const r2El  = document.getElementById('stat-r2');
+        const maeEl = document.getElementById('stat-mae');
+        if (r2El  && d.metrics.test_r2  != null) r2El.textContent  = d.metrics.test_r2;
+        if (maeEl && d.metrics.test_mae != null) maeEl.textContent = d.metrics.test_mae;
+      }
+    })
+    .catch(() => {}); // silently fail if backend offline
+</script>
+</body>
+</html>

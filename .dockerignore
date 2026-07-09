@@ -1,0 +1,17 @@
+**/__pycache__/
+**/*.pyc
+.env
+.env.local
+backend/predictions.log
+*.log
+.git/
+.gitignore
+.ipynb_checkpoints/
+dataset/
+model/*.ipynb
+model/*.png
+frontend/
+myenv/
+.vscode/
+.idea/
+.DS_Store

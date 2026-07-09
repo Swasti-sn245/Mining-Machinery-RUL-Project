@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+
+# Logs
+backend/predictions.log
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Model training artifacts that are large/regeneratable (keep the trained
+# outputs needed to run the API, ignore raw dataset re-downloads if desired)
+# Uncomment if you don't want to commit the ~500MB CMAPSS files:
+# dataset/CMAPSSData/*.txt

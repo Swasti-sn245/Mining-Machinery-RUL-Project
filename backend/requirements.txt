@@ -1,0 +1,32 @@
+# MineGuard backend — runtime dependencies only (used by Docker / production)
+# Install: pip install -r requirements.txt
+#
+# For training the model (notebook), see ../model/requirements.txt instead —
+# heavy packages like matplotlib, seaborn, and jupyter are NOT needed to serve
+# predictions, so they're kept out of the deployed image.
+
+# -- Web framework --
+fastapi==0.139.0
+uvicorn[standard]==0.51.0
+pydantic==2.13.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# -- Rate limiting --
+slowapi==0.1.9
+
+# -- Data + ML core (MUST match versions used in model/train_model.ipynb —
+# scikit-learn pickles are version-sensitive; a mismatch can fail to load) --
+pandas==3.0.2
+numpy==2.4.4
+scikit-learn==1.8.0
+joblib==1.5.3
+
+# -- Boosting model (only needed if XGBoost is ever selected as best_model) --
+xgboost==3.3.0
+
+# -- Explainability --
+shap==0.52.0
+
+# -- Production server --
+gunicorn==23.0.0

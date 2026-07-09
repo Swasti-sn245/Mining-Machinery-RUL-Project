@@ -1,0 +1,12 @@
+# MineGuard model training — additional dependencies for train_model.ipynb
+# Install: pip install -r requirements.txt (backend deps) -r ../model/requirements.txt
+#
+# These are only needed to RETRAIN the model — the deployed backend does not
+# need matplotlib, seaborn, or jupyter, which is why they're kept separate
+# from backend/requirements.txt (keeps the production/Docker image lean).
+
+matplotlib==3.10.0
+seaborn==0.13.2
+jupyter==1.1.1
+notebook==7.3.2
+ipykernel==6.29.5

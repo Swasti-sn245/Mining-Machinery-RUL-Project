@@ -1,0 +1,30 @@
+# Local full-stack run: docker compose up --build
+# Backend  -> http://localhost:5000
+# Frontend -> http://localhost:8080
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:8080
+      - RATE_LIMIT_PER_MINUTE=60
+      - LOG_LEVEL=INFO
+    # Note: predictions.log lives inside the container and resets on rebuild.
+    # For persistence, mount a directory volume, e.g.:
+    #   volumes:
+    #     - predictions-data:/app/backend
+    restart: unless-stopped
+
+  frontend:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    restart: unless-stopped

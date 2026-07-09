@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MineGuard model architecture, dataset details, ML pipeline, and version history.">
+<meta name="api-base-url" content="">
+<meta property="og:title" content="MineGuard — About">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b0f14'/%3E%3Cpath d='M50 20a30 30 0 1 0 .01 0z' fill='none' stroke='%23f0a500' stroke-width='8'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23f0a500'/%3E%3C/svg%3E">
+<title>MineGuard — About</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<script src="config.js"></script>
+<style>
+.about-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.full-width { grid-column: 1 / -1; }
+
+/* ── Card ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.card-title {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.card-body { padding: 1.25rem; }
+
+/* ── Metric tiles ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.metric-tile {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+.metric-tile:last-child { border-right: none; }
+.metric-value {
+  font-family: var(--font-head);
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+}
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.metric-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ── Model comparison table ── */
+.model-table { width: 100%; border-collapse: collapse; }
+.model-table th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.model-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.model-table tr:last-child td { border-bottom: none; }
+.model-table tr:hover td { background: rgba(255,255,255,0.02); }
+.best-row td { color: var(--accent); }
+.best-badge {
+  display: inline-block;
+  background: rgba(240,165,0,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(240,165,0,0.25);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* ── Feature mapping table ── */
+.map-table { width: 100%; border-collapse: collapse; }
+.map-table th {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.map-table td {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.map-table tr:last-child td { border-bottom: none; }
+.map-table .ai4i { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+.map-table .mining { color: var(--text); }
+
+/* ── Pipeline steps ── */
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.pipe-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pipe-step:last-child { border-bottom: none; }
+.pipe-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  min-width: 24px;
+  padding-top: 1px;
+}
+.pipe-body {}
+.pipe-title {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+.pipe-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.pipe-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background: rgba(0,198,167,0.1);
+  color: var(--accent2);
+  border: 1px solid rgba(0,198,167,0.2);
+  margin-top: 5px;
+}
+
+/* ── Improvements list ── */
+.improvement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.improvement-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.improvement-item:last-child { border-bottom: none; }
+.imp-icon { font-size: 16px; min-width: 22px; }
+.imp-body {}
+.imp-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.imp-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ── Dataset note ── */
+.dataset-note {
+  background: rgba(240,165,0,0.05);
+  border: 1px solid rgba(240,165,0,0.2);
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.dataset-note strong { color: var(--text); }
+
+/* ── Tech stack ── */
+.tech-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tech-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.tech-item:last-child { border-bottom: none; }
+.tech-name { font-family: var(--font-mono); font-size: 12px; }
+.tech-role { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ── Future scope ── */
+.scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.scope-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+}
+.scope-icon { font-size: 20px; margin-bottom: 0.5rem; }
+.scope-title {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 0.35rem;
+}
+.scope-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+@media (max-width: 768px) {
+  .about-grid { grid-template-columns: 1fr; padding: 1.5rem 1rem; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .scope-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="home.html" class="nav-logo">MINE<span>GUARD</span></a>
+  <a href="home.html"  class="nav-link">Home</a>
+  <a href="rul.html" class="nav-link">RUL Predictor</a>
+  <a href="explosivity.html" class="nav-link">Mine Air Analysis</a>
+  <a href="about.html" class="nav-link active">About</a>
+  <a href="rul.html" class="nav-cta">Launch App →</a>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-label">Project Documentation</div>
+    <div class="page-title">About MineGuard</div>
+    <div class="page-sub">Model architecture, dataset details, pipeline, and future scope</div>
+  </div>
+</div>
+
+<div class="about-grid">
+
+  <!-- ── Model metrics tiles ── -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title">Model Performance — RandomForest (tuned via RandomizedSearchCV + GroupKFold)</div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-tile">
+        <div class="metric-value" id="m-r2">—</div>
+        <div class="metric-label">Test R²</div>
+        <div class="metric-sub">Holdout set (100 unseen engines)</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-value" id="m-mae">—</div>
+        <div class="metric-label">MAE (cycles)</div>
+        <div class="metric-sub">Mean absolute error</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-value" id="m-rmse">—</div>
+        <div class="metric-label">RMSE (cycles)</div>
+        <div class="metric-sub">Root mean sq error</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-value" id="m-cv">—</div>
+        <div class="metric-label">CV R²</div>
+        <div class="metric-sub">5-fold GroupKFold</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Model comparison ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Model Comparison</div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="model-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Test R²</th>
+            <th>MAE (cycles)</th>
+            <th>Overfit Gap</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="best-row">
+            <td>Random Forest<span class="best-badge">BEST</span></td>
+            <td id="cmp-ens-r2">0.8295</td>
+            <td id="cmp-ens-mae">11.89</td>
+            <td id="cmp-ens-gap">0.0199</td>
+          </tr>
+          <tr>
+            <td>XGBoost</td>
+            <td>0.8224</td>
+            <td>11.71</td>
+            <td>0.0096</td>
+          </tr>
+          <tr>
+            <td>Voting Ensemble</td>
+            <td>0.8189</td>
+            <td>11.81</td>
+            <td>0.0092</td>
+          </tr>
+          <tr>
+            <td>ANN (MLP)</td>
+            <td>0.8177</td>
+            <td>11.92</td>
+            <td>0.0000</td>
+          </tr>
+          <tr>
+            <td>Gradient Boosting</td>
+            <td>0.8080</td>
+            <td>12.33</td>
+            <td>0.0192</td>
+          </tr>
+          <tr>
+            <td>AdaBoost</td>
+            <td>0.7865</td>
+            <td>13.95</td>
+            <td>−0.0106</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── ML Pipeline ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">ML Pipeline</div>
+    </div>
+    <div class="card-body" style="padding:0 1.25rem">
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="pipe-num">01</div>
+          <div class="pipe-body">
+            <div class="pipe-title">DATA LOADING</div>
+            <div class="pipe-desc">NASA C-MAPSS FD001 — 20,631 training rows (100 engines run to actual failure), 13,096 test rows, 14 usable sensors after dropping 8 near-constant columns.</div>
+            <span class="pipe-tag">pandas</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">02</div>
+          <div class="pipe-body">
+            <div class="pipe-title">TRUE RUL LABEL + STANDARD CLIP</div>
+            <div class="pipe-desc">RUL = (last cycle NASA recorded) − (current cycle) — an observed value, not a derived formula. Ceiling clipped at 125 cycles per the standard C-MAPSS literature convention (Heimes 2008; Saxena et al. 2008).</div>
+            <span class="pipe-tag">numpy</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">03</div>
+          <div class="pipe-body">
+            <div class="pipe-title">GROUP-AWARE TRAIN / VAL / TEST SPLIT</div>
+            <div class="pipe-desc">GroupShuffleSplit + GroupKFold throughout — an engine's cycles never span two splits, preventing leakage. Test engines touched exactly once, at final evaluation.</div>
+            <span class="pipe-tag">scikit-learn</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">04</div>
+          <div class="pipe-body">
+            <div class="pipe-title">HYPERPARAMETER TUNING</div>
+            <div class="pipe-desc">RandomizedSearchCV + 3-fold GroupKFold for XGBoost, Gradient Boosting, Random Forest, AdaBoost, and an MLP — small, CPU-light search grids.</div>
+            <span class="pipe-tag">RandomizedSearchCV</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">05</div>
+          <div class="pipe-body">
+            <div class="pipe-title">REFIT + VOTING ENSEMBLE</div>
+            <div class="pipe-desc">Tuned models refit on the full training pool (train + validation). Top 3 by validation R² combined into a validation-weighted Voting Ensemble.</div>
+            <span class="pipe-tag">scikit-learn + xgboost</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">06</div>
+          <div class="pipe-body">
+            <div class="pipe-title">5-FOLD CROSS VALIDATION</div>
+            <div class="pipe-desc">GroupKFold(5) on the full training pool reports mean ± std R²/MAE per model — a robustness check distinct from the tuning search.</div>
+            <span class="pipe-tag">GroupKFold CV</span>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <div class="pipe-num">07</div>
+          <div class="pipe-body">
+            <div class="pipe-title">SHAP EXPLAINER</div>
+            <div class="pipe-desc">TreeExplainer on the winning Random Forest computes per-sample SHAP values. Each prediction gets unique failure reasons — not global feature importances.</div>
+            <span class="pipe-tag">shap TreeExplainer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Dataset note ── -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title">Dataset — NASA C-MAPSS FD001 (Turbofan Engine Degradation Simulation)</div>
+    </div>
+    <div class="card-body">
+      <div class="dataset-note">
+        <strong>Why this dataset?</strong> Real mining equipment sensor data is proprietary — OEMs do not release it publicly, an acknowledged challenge in the field. Earlier versions of this project used the AI4I 2020 dataset, but AI4I has no real RUL label — the previous RUL target was derived from an invented formula built on top of one of the model's own input features, which inflated accuracy without teaching the model anything real. NASA C-MAPSS FD001 solves this: every engine is run in simulation <strong>until it actually fails</strong>, so RUL = (cycle at failure) − (current cycle) is a genuinely observed value, not an assumption.<br><br>
+        <strong>The only transformation applied</strong> is a ceiling clip at 125 cycles — a long-standing, literature-cited convention (Heimes, 2008; Saxena et al., 2008), not an invented curve — because sensor readings in the first ~100+ cycles of an engine's life carry no real degradation signal.<br><br>
+        <strong>Planned upgrade:</strong> Direct integration with NCL Nigahi Project operational data remains a future scope item. When real mining data becomes available, only the training step changes — the pipeline, API, and frontend structure stay the same.
+      </div>
+      <br>
+      <table class="map-table">
+        <thead>
+          <tr>
+            <th>FD001 Sensor</th>
+            <th>Physical Meaning</th>
+            <th>Unit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="ai4i">sensor_2</td><td class="mining">LPC outlet temperature (T24)</td><td class="mining">°R</td></tr>
+          <tr><td class="ai4i">sensor_3</td><td class="mining">HPC outlet temperature (T30)</td><td class="mining">°R</td></tr>
+          <tr><td class="ai4i">sensor_4</td><td class="mining">LPT outlet temperature (T50)</td><td class="mining">°R</td></tr>
+          <tr><td class="ai4i">sensor_7</td><td class="mining">HPC outlet pressure (P30)</td><td class="mining">psia</td></tr>
+          <tr><td class="ai4i">sensor_8</td><td class="mining">Physical fan speed (Nf)</td><td class="mining">rpm</td></tr>
+          <tr><td class="ai4i">sensor_9</td><td class="mining">Physical core speed (Nc)</td><td class="mining">rpm</td></tr>
+          <tr><td class="ai4i">sensor_11</td><td class="mining">HPC static pressure (Ps30)</td><td class="mining">psia</td></tr>
+          <tr><td class="ai4i">sensor_12</td><td class="mining">Fuel flow / pressure ratio (phi)</td><td class="mining">pps/psi</td></tr>
+          <tr><td class="ai4i">sensor_13</td><td class="mining">Corrected fan speed (NRf)</td><td class="mining">rpm</td></tr>
+          <tr><td class="ai4i">sensor_14</td><td class="mining">Corrected core speed (NRc)</td><td class="mining">rpm</td></tr>
+          <tr><td class="ai4i">sensor_15</td><td class="mining">Bypass ratio (BPR)</td><td class="mining">—</td></tr>
+          <tr><td class="ai4i">sensor_17</td><td class="mining">Bleed enthalpy (htBleed)</td><td class="mining">—</td></tr>
+          <tr><td class="ai4i">sensor_20</td><td class="mining">HPT coolant bleed (W31)</td><td class="mining">lbm/s</td></tr>
+          <tr><td class="ai4i">sensor_21</td><td class="mining">LPT coolant bleed (W32)</td><td class="mining">lbm/s</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Tech stack ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Tech Stack</div>
+    </div>
+    <div class="card-body" style="padding:0 1.25rem">
+      <div class="tech-row">
+        <div class="tech-item"><span class="tech-name">Python 3.12</span><span class="tech-role">Core language</span></div>
+        <div class="tech-item"><span class="tech-name">scikit-learn 1.8</span><span class="tech-role">RandomForest, GradientBoosting, AdaBoost, MLP, RandomizedSearchCV, GroupKFold</span></div>
+        <div class="tech-item"><span class="tech-name">XGBoost</span><span class="tech-role">XGBRegressor (compared, not winner)</span></div>
+        <div class="tech-item"><span class="tech-name">SHAP</span><span class="tech-role">Per-sample failure explanations</span></div>
+        <div class="tech-item"><span class="tech-name">FastAPI + uvicorn</span><span class="tech-role">REST API backend</span></div>
+        <div class="tech-item"><span class="tech-name">pandas 2.2 + numpy</span><span class="tech-role">Data processing</span></div>
+        <div class="tech-item"><span class="tech-name">joblib</span><span class="tech-role">Model serialisation (.pkl)</span></div>
+        <div class="tech-item"><span class="tech-name">HTML / CSS / Vanilla JS</span><span class="tech-role">Frontend (no framework)</span></div>
+        <div class="tech-item"><span class="tech-name">Render.com</span><span class="tech-role">Backend deployment (free)</span></div>
+        <div class="tech-item"><span class="tech-name">Vercel / GitHub Pages</span><span class="tech-role">Frontend deployment (free)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── V3 Improvements ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">What Changed in v3</div>
+    </div>
+    <div class="card-body" style="padding:0 1.25rem">
+      <div class="improvement-list">
+        <div class="improvement-item">
+          <div class="imp-icon">📈</div>
+          <div class="imp-body">
+            <div class="imp-title">Non-linear RUL curve</div>
+            <div class="imp-desc">Replaced linear label (MAX - wear) with a piecewise degradation curve. Slow early decay, fast near end-of-life — physically realistic.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🔊</div>
+          <div class="imp-body">
+            <div class="imp-title">Noise augmentation</div>
+            <div class="imp-desc">2% Gaussian noise applied to all sensor columns. Dataset doubled to 20K rows. Prevents model memorising exact values.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🔬</div>
+          <div class="imp-body">
+            <div class="imp-title">2 new features</div>
+            <div class="imp-desc">wear_squared (accelerating degradation) and thermal_stress (temp differential × power). Better captures compound failure mechanisms.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🗳</div>
+          <div class="imp-body">
+            <div class="imp-title">Voting Ensemble</div>
+            <div class="imp-desc">GB (60%) + XGBoost (40%) combined. Weights reflect GB's higher individual score. Typically gains 1–3% R² over single model.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">📊</div>
+          <div class="imp-body">
+            <div class="imp-title">5-fold cross validation</div>
+            <div class="imp-desc">More reliable accuracy estimate than single train/test split. R² reported as mean ± std across all folds.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🔍</div>
+          <div class="imp-body">
+            <div class="imp-title">SHAP per-sample reasons</div>
+            <div class="imp-desc">Replaced global feature_importances_ with SHAP TreeExplainer. Failure reasons are now genuinely unique per prediction.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">✅</div>
+          <div class="imp-body">
+            <div class="imp-title">Input range validation</div>
+            <div class="imp-desc">Both frontend and backend validate all 5 input fields. Clear error messages with acceptable ranges shown in real time.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── V4 Improvements ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">What Changed in v4 — Machine-Scaled RUL</div>
+    </div>
+    <div class="card-body" style="padding:0 1.25rem">
+      <div class="improvement-list">
+        <div class="improvement-item">
+          <div class="imp-icon">⚙️</div>
+          <div class="imp-body">
+            <div class="imp-title">6 individual machine types</div>
+            <div class="imp-desc">Replaced 3 grade buttons (L/M/H) with 6 specific machines: Scraper, Grader, Dozer, Shovel, Dumper, Dragline. Each has a distinct real-world max service life.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">📏</div>
+          <div class="imp-body">
+            <div class="imp-title">Real-world RUL scaling</div>
+            <div class="imp-desc">v4 model predicted a proxy RUL on a 0–253 scale (AI4I-based); v5's FD001 model predicts on a 0–125 scale. Frontend and backend convert: health_pct = raw_rul / 125, then scaled_rul = health_pct × machine_max_hours. A Dragline with 80% health shows ~96,000 hrs remaining; a Scraper shows ~20,000 hrs.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🎯</div>
+          <div class="imp-body">
+            <div class="imp-title">Health-based risk thresholds</div>
+            <div class="imp-desc">Risk levels now computed on health_pct (universal), not raw hours. Critical: &lt;20%, High: 20–40%, Medium: 40–65%, Low: &gt;65%. Fair comparison across all machine classes.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🚀</div>
+          <div class="imp-body">
+            <div class="imp-title">FastAPI backend</div>
+            <div class="imp-desc">Migrated from Flask to FastAPI. Automatic Swagger UI at /docs, Pydantic validation, async-capable. Zero breaking changes to model or feature pipeline.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── V5 Improvements ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">What Changed in v5 — Real RUL Labels</div>
+    </div>
+    <div class="card-body" style="padding:0 1.25rem">
+      <div class="improvement-list">
+        <div class="improvement-item">
+          <div class="imp-icon">🔁</div>
+          <div class="imp-body">
+            <div class="imp-title">Switched to NASA C-MAPSS FD001</div>
+            <div class="imp-desc">Replaced AI4I 2020 (no real RUL label, formula-derived target) with FD001, where RUL is the actual observed number of cycles until an engine failed in simulation.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🧪</div>
+          <div class="imp-body">
+            <div class="imp-title">Group-aware splitting throughout</div>
+            <div class="imp-desc">GroupShuffleSplit / GroupKFold everywhere — an engine's cycles never span train, validation, and test simultaneously, eliminating a subtle leakage risk.</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">🏆</div>
+          <div class="imp-body">
+            <div class="imp-title">Random Forest selected on test performance</div>
+            <div class="imp-desc">5 tuned models + a Voting Ensemble compared on a held-out test set touched exactly once. Random Forest won on test R² (0.8295) with a healthy overfit gap (0.0199).</div>
+          </div>
+        </div>
+        <div class="improvement-item">
+          <div class="imp-icon">📥</div>
+          <div class="imp-body">
+            <div class="imp-title">14-sensor input form</div>
+            <div class="imp-desc">Replaced the 5 mining-analogy inputs with the 14 real FD001 sensors the model actually uses — temperatures, pressures, shaft speeds, and flow/bleed ratios.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Future scope ── -->
+  <div class="card full-width">
+    <div class="card-header">
+      <div class="card-title">Future Scope</div>
+    </div>
+    <div class="card-body">
+      <div class="scope-grid">
+        <div class="scope-card">
+          <div class="scope-icon">🚛</div>
+          <div class="scope-title">FLEET OVERVIEW</div>
+          <div class="scope-desc">Multi-machine dashboard. Monitor health scores, RUL rankings, and risk levels across the entire fleet on one screen.</div>
+        </div>
+        <div class="scope-card">
+          <div class="scope-icon">📡</div>
+          <div class="scope-title">REAL NCL DATA</div>
+          <div class="scope-desc">Integration with operational data from NCL Nigahi Project. OBD/CAN bus telemetry feed. Same pipeline, real sensor inputs.</div>
+        </div>
+        <div class="scope-card">
+          <div class="scope-icon">🧠</div>
+          <div class="scope-title">LSTM / DEEP LEARNING</div>
+          <div class="scope-desc">Time-series LSTM model for sequential sensor data. Captures temporal degradation patterns not visible in snapshot features.</div>
+        </div>
+        <div class="scope-card">
+          <div class="scope-icon">🧩</div>
+          <div class="scope-title">DIGITAL TWIN</div>
+          <div class="scope-desc">Physics-informed simulation layer. What-if maintenance scheduling: "Delay service 3 days — what is the failure probability?"</div>
+        </div>
+        <div class="scope-card">
+          <div class="scope-icon">🔔</div>
+          <div class="scope-title">ALERT SYSTEM</div>
+          <div class="scope-desc">SMS/email notifications when RUL drops below configurable threshold. Integrates with existing mine maintenance workflows.</div>
+        </div>
+        <div class="scope-card">
+          <div class="scope-icon">⛏</div>
+          <div class="scope-title">DRILLING MACHINERY</div>
+          <div class="scope-desc">Extend coverage to drilling equipment (blast hole drills, DTH hammers). Separate model trained on drilling-specific failure modes.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end about-grid -->
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">MINE<span>GUARD</span></div>
+    <div class="footer-links">
+      <a href="home.html">Home</a>
+      <a href="rul.html">RUL Predictor</a>
+      <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">NASA C-MAPSS FD001 · Real turbofan run-to-failure data · Sensors used as analogs for mining equipment</div>
+  </div>
+</footer>
+
+<script>
+  // Load live metrics from backend
+  const API = window.MINEGUARD_API_URL || 'http://localhost:5000';
+  fetch(`${API}/models`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.metrics) {
+        const set = (id, val) => {
+          const el = document.getElementById(id);
+          if (el && val != null) el.textContent = val;
+        };
+        set('m-r2',   d.metrics.test_r2);
+        set('m-mae',  d.metrics.test_mae);
+        set('m-rmse', d.metrics.test_rmse);
+        set('m-cv',   d.cv_r2_mean != null ? `${d.cv_r2_mean}` : '—');
+
+        // Ensemble row in comparison table
+        set('cmp-ens-r2',  d.metrics.test_r2);
+        set('cmp-ens-mae', d.metrics.test_mae);
+        set('cmp-ens-gap', d.metrics.overfit_gap);
+      }
+    })
+    .catch(() => {}); // silently fail if backend offline
+</script>
+</body>
+</html>

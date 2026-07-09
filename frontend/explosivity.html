@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MineGuard — Mine Air Explosivity Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+
+/* ── Layout ── */
+.main-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ── Panel ── */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.panel-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.panel-title {
+  font-family: var(--font-head);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.panel-body { padding: 1.25rem; }
+
+/* ── Form inputs ── */
+.field { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.85rem; }
+
+label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input-wrap { position: relative; }
+
+input[type=number] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 0.55rem 2.8rem 0.55rem 0.75rem;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+  -moz-appearance: textfield;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+input[type=number]:focus   { border-color: var(--accent); }
+input[type=number].invalid { border-color: var(--danger); }
+input[type=number].valid   { border-color: var(--ok); }
+input::placeholder { color: var(--muted); }
+
+.input-unit {
+  position: absolute;
+  right: 0.6rem; top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+/* ── Gas group separator ── */
+.gas-group-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+/* ── Total indicator ── */
+.total-bar {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.total-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.total-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: color 0.2s;
+}
+.total-value.ok    { color: var(--ok); }
+.total-value.warn  { color: var(--warning); }
+.total-value.err   { color: var(--danger); }
+.total-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0 0.5rem;
+}
+.total-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.3s, background 0.2s;
+}
+
+/* ── Analyse button ── */
+.btn-analyze {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.9rem;
+  background: var(--accent);
+  border: none;
+  border-radius: 3px;
+  color: var(--bg);
+  font-family: var(--font-head);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-analyze:hover  { opacity: 0.9; }
+.btn-analyze:active { transform: scale(0.99); }
+
+/* ── Error ── */
+.error-msg {
+  display: none;
+  margin-top: 0.75rem;
+  background: rgba(232,65,42,0.1);
+  border: 1px solid rgba(232,65,42,0.3);
+  border-radius: 3px;
+  padding: 0.65rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--danger);
+  line-height: 1.5;
+}
+
+/* ── Right: Metrics grid ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+}
+.metric-cell {
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.metric-cell:nth-child(2n) { border-right: none; }
+.metric-cell:nth-last-child(-n+2) { border-bottom: none; }
+.metric-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.metric-value {
+  font-family: var(--font-head);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--accent2);
+  line-height: 1;
+}
+.metric-unit {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* ── Ellicott Chart ── */
+.chart-section {
+  padding: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+.chart-section .panel-title { margin-bottom: 1rem; font-size: 11px; color: var(--muted); font-family: var(--font-head); letter-spacing: 2px; text-transform: uppercase; }
+
+.chart-wrap {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 1rem;
+  align-items: start;
+}
+
+.chart-canvas-container {
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+canvas#ellicott-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chart-stat {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
+}
+.chart-stat-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.chart-stat-value {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent2);
+}
+
+/* ── Zone classification ── */
+.zone-banner {
+  margin: 1rem 1.25rem 1.25rem;
+  border-radius: 4px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  border: 1px solid;
+}
+.zone-banner-title {
+  font-family: var(--font-head);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.zone-banner-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* Colour variants */
+.zone-explosive       { background: rgba(232,65,42,0.12);  border-color: rgba(232,65,42,0.4);  color: var(--danger); }
+.zone-lean            { background: rgba(0,198,167,0.1);   border-color: rgba(0,198,167,0.35); color: var(--ok); }
+.zone-rich            { background: rgba(240,165,0,0.1);   border-color: rgba(240,165,0,0.35); color: var(--warning); }
+.zone-safe            { background: rgba(85,200,240,0.1);  border-color: rgba(85,200,240,0.3); color: #55c8f0; }
+
+/* ── Placeholder ── */
+.placeholder {
+  text-align: center;
+  padding: 5rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 1rem;
+  opacity: 0.4;
+}
+.placeholder-title {
+  font-family: var(--font-head);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--border);
+  letter-spacing: 3px;
+  margin-bottom: 0.5rem;
+}
+.placeholder-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  line-height: 1.7;
+}
+
+/* ── Loading ── */
+.loading-panel {
+  display: none;
+  text-align: center;
+  padding: 4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 1rem;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Legend ── */
+.chart-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.legend-swatch {
+  width: 10px; height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; padding: 1rem; }
+  .chart-wrap { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="home.html" class="nav-logo">MINE<span>GUARD</span></a>
+  <a href="home.html"          class="nav-link">Home</a>
+  <a href="rul.html"         class="nav-link">RUL Predictor</a>
+  <a href="explosivity.html"   class="nav-link active">Mine Air Analysis</a>
+  <a href="about.html"         class="nav-link">About</a>
+  <a href="explosivity.html"   class="nav-cta">Launch Analyser →</a>
+</nav>
+
+<div class="page-header">
+  <div class="page-header-inner">
+    <div class="page-label">Mine Atmosphere Safety</div>
+    <div class="page-title">Air Explosivity Analysis</div>
+    <div class="page-sub">Enter gas concentrations to compute LEL, UEL, excess nitrogen and plot the Ellicott explosion zone</div>
+  </div>
+</div>
+
+<div class="main-grid">
+
+  <!-- ── Left: Inputs ── -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Gas Concentrations — % Volume</div>
+      </div>
+      <div class="panel-body">
+
+        <!-- Inert gases -->
+        <div class="gas-group-label">Inert / Diluent Gases</div>
+
+        <div class="field">
+          <label>Oxygen (O₂)</label>
+          <div class="input-wrap">
+            <input type="number" id="o2" placeholder="20.9" step="0.01" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Nitrogen (N₂)</label>
+          <div class="input-wrap">
+            <input type="number" id="n2" placeholder="78.1" step="0.01" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Carbon Dioxide (CO₂)</label>
+          <div class="input-wrap">
+            <input type="number" id="co2" placeholder="0.04" step="0.001" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <!-- Explosive gases -->
+        <div class="gas-group-label">Explosive Gases</div>
+
+        <div class="field">
+          <label>Methane (CH₄)</label>
+          <div class="input-wrap">
+            <input type="number" id="ch4" placeholder="0.5" step="0.001" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Carbon Monoxide (CO)</label>
+          <div class="input-wrap">
+            <input type="number" id="co" placeholder="0.0" step="0.001" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Hydrogen (H₂)</label>
+          <div class="input-wrap">
+            <input type="number" id="h2" placeholder="0.0" step="0.001" min="0" max="100"
+                   oninput="onGasInput()">
+            <span class="input-unit">% vol</span>
+          </div>
+        </div>
+
+        <!-- Total indicator -->
+        <div class="total-bar">
+          <span class="total-label">Total</span>
+          <div class="total-progress"><div class="total-progress-fill" id="total-fill" style="width:0%"></div></div>
+          <span class="total-value" id="total-val">0.000 %</span>
+        </div>
+
+        <button class="btn-analyze" onclick="analyse()">⚡ ANALYSE SAMPLE</button>
+        <div class="error-msg" id="error-msg"></div>
+
+      </div>
+    </div>
+
+    <div style="margin-top:0.75rem;font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;letter-spacing:0.5px;line-height:1.7">
+      Le Chatelier's Law · Ellicott Explosion Chart<br>CH₄ · CO · H₂ mixture analysis
+    </div>
+  </div>
+
+  <!-- ── Right: Results ── -->
+  <div id="right-col">
+
+    <!-- Loading -->
+    <div class="loading-panel" id="loading-panel">
+      <div class="spinner"></div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px">COMPUTING EXPLOSIVITY...</div>
+    </div>
+
+    <!-- Results panel -->
+    <div class="panel" id="results-panel" style="display:none;">
+
+      <!-- Metrics -->
+      <div class="panel-header">
+        <div class="panel-title">Analysis Results</div>
+        <span style="margin-left:auto;font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:1px">LE CHATELIER · MIXTURE</span>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-cell">
+          <div class="metric-label">Lower Expl. Limit (LEL)</div>
+          <div class="metric-value" id="res-lel">—</div>
+          <div class="metric-unit">% vol</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Upper Expl. Limit (UEL)</div>
+          <div class="metric-value" id="res-uel">—</div>
+          <div class="metric-unit">% vol</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">Excess N₂ Required</div>
+          <div class="metric-value" id="res-nex">—</div>
+          <div class="metric-unit">% vol</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-label">O₂ Requirement</div>
+          <div class="metric-value" id="res-o2req">—</div>
+          <div class="metric-unit">% vol</div>
+        </div>
+      </div>
+
+      <!-- Ellicott Chart -->
+      <div class="chart-section">
+        <div class="panel-title">Ellicott Explosion Classification Chart</div>
+        <div class="chart-wrap">
+          <div>
+            <div class="chart-canvas-container">
+              <canvas id="ellicott-chart" width="480" height="360"></canvas>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-swatch" style="background:rgba(220,38,38,0.45)"></div>Explosive zone</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:rgba(22,163,74,0.35)"></div>Fuel-lean</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:rgba(202,138,4,0.4)"></div>Fuel-rich</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:rgba(37,99,235,0.35)"></div>Non-explosive</div>
+            </div>
+          </div>
+          <div class="chart-side">
+            <div class="chart-stat">
+              <div class="chart-stat-label">Fuel Content (x)</div>
+              <div class="chart-stat-value" id="res-fuel">—</div>
+              <div class="metric-unit" style="margin-top:3px">% excess above Lmin</div>
+            </div>
+            <div class="chart-stat">
+              <div class="chart-stat-label">O₂ Content (y)</div>
+              <div class="chart-stat-value" id="res-o2c">—</div>
+              <div class="metric-unit" style="margin-top:3px">% excess above req.</div>
+            </div>
+            <div class="chart-stat">
+              <div class="chart-stat-label">Total Explosive Gas</div>
+              <div class="chart-stat-value" id="res-pt">—</div>
+              <div class="metric-unit" style="margin-top:3px">% vol (CH₄+CO+H₂)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone banner -->
+      <div id="zone-banner" class="zone-banner">
+        <div class="zone-banner-title" id="zone-title">—</div>
+        <div class="zone-banner-sub" id="zone-sub">—</div>
+      </div>
+
+    </div>
+
+    <!-- Placeholder -->
+    <div class="placeholder" id="placeholder">
+      <div class="placeholder-icon">💨</div>
+      <div class="placeholder-title">AWAITING SAMPLE</div>
+      <div class="placeholder-sub">
+        Enter gas concentrations (must sum to 100%).<br>
+        All six gases are required — enter 0 if not present.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-logo">MINE<span>GUARD</span></div>
+    <div class="footer-links">
+      <a href="home.html">Home</a>
+      <a href="index.html">RUL Predictor</a>
+      <a href="explosivity.html">Explosivity</a>
+      <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">Le Chatelier's Law · Ellicott Explosion Chart · Mine Safety Analysis</div>
+  </div>
+</footer>
+
+<script>
+// ── Gas explosion constants (CH₄, CO, H₂) ──────────────────────────────
+const LEL_PURE  = [5.0,  12.5, 4.0];
+const UEL_PURE  = [14.0, 74.2, 74.2];
+const MCL_PURE  = [5.9,  13.8, 4.3];   // minimum concentration at LEL
+const LIST4     = [12.2, 6.1,  5.1];
+const LIST5     = [6.07, 4.13, 16.59];
+
+// ── Live total tracker ──────────────────────────────────────────────────
+function getValues() {
+  return {
+    O2:  parseFloat(document.getElementById('o2').value)  || 0,
+    N2:  parseFloat(document.getElementById('n2').value)  || 0,
+    CO2: parseFloat(document.getElementById('co2').value) || 0,
+    ch4: parseFloat(document.getElementById('ch4').value) || 0,
+    co:  parseFloat(document.getElementById('co').value)  || 0,
+    h2:  parseFloat(document.getElementById('h2').value)  || 0,
+  };
+}
+
+function onGasInput() {
+  const v = getValues();
+  const total = v.O2 + v.N2 + v.CO2 + v.ch4 + v.co + v.h2;
+  const pct   = Math.min(100, (total / 100) * 100);
+
+  const fillEl  = document.getElementById('total-fill');
+  const valEl   = document.getElementById('total-val');
+  const isClose = Math.abs(total - 100) <= 0.01;
+  const isOver  = total > 100.01;
+
+  fillEl.style.width      = pct + '%';
+  fillEl.style.background = isClose ? 'var(--ok)' : isOver ? 'var(--danger)' : 'var(--accent)';
+  valEl.textContent       = total.toFixed(3) + ' %';
+  valEl.className         = 'total-value ' + (isClose ? 'ok' : isOver ? 'err' : 'warn');
+}
+
+// ── Error helpers ───────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.innerHTML    = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+// ── Main analysis ───────────────────────────────────────────────────────
+function analyse() {
+  hideError();
+
+  const v = getValues();
+  const { O2, N2, CO2, ch4, co, h2 } = v;
+  const total = O2 + N2 + CO2 + ch4 + co + h2;
+
+  // Validate inputs exist
+  const ids = ['o2','n2','co2','ch4','co','h2'];
+  for (const id of ids) {
+    if (document.getElementById(id).value === '') {
+      showError(`Please fill in all fields. Enter 0 if a gas is not present.`);
+      document.getElementById(id).classList.add('invalid');
+      return;
+    }
+    document.getElementById(id).classList.remove('invalid');
+    document.getElementById(id).classList.add('valid');
+  }
+
+  if (Math.abs(total - 100) > 0.01) {
+    showError(`Total gas concentration must equal 100%. Current total = ${total.toFixed(3)}%`);
+    return;
+  }
+
+  // Show loading briefly
+  document.getElementById('loading-panel').style.display  = 'block';
+  document.getElementById('results-panel').style.display  = 'none';
+  document.getElementById('placeholder').style.display    = 'none';
+
+  setTimeout(() => {
+    try {
+      const result = compute(O2, N2, CO2, ch4, co, h2);
+      render(result);
+    } catch(e) {
+      showError(e.message);
+      document.getElementById('placeholder').style.display = 'block';
+    } finally {
+      document.getElementById('loading-panel').style.display = 'none';
+    }
+  }, 400);
+}
+
+// ── Core computation (Le Chatelier + Ellicott) ──────────────────────────
+function compute(O2, N2, CO2, ch4, co, h2) {
+  const P  = [ch4, co, h2];
+  const pt = P.reduce((a, b) => a + b, 0);
+
+  if (pt === 0) {
+    throw new Error('Explosive gas concentration is zero — no LEL/UEL can be computed. Enter at least one explosive gas (CH₄, CO, or H₂).');
+  }
+
+  const sum1 = P.reduce((s, p, i) => s + p / LEL_PURE[i], 0);
+  const sum2 = P.reduce((s, p, i) => s + p / UEL_PURE[i], 0);
+  const sum3 = P.reduce((s, p, i) => s + p / MCL_PURE[i], 0);
+
+  const lel_mix = pt / sum1;
+  const uel_mix = pt / sum2;
+  const Lmin    = pt / sum3;
+
+  // Excess nitrogen and oxygen requirement
+  const Nex   = (Lmin / pt) * LIST5.reduce((s, v, i) => s + v * P[i], 0);
+  const O2req  = 0.2093 * (100 - Nex - Lmin);
+
+  // Ellicott co-ordinates
+  const x = pt - Lmin;   // fuel content axis
+  const y = O2 - O2req;  // oxygen content axis
+
+  return { lel_mix, uel_mix, Nex, O2req, pt, Lmin, x, y, O2 };
+}
+
+// ── Render results ──────────────────────────────────────────────────────
+function render({ lel_mix, uel_mix, Nex, O2req, pt, Lmin, x, y, O2 }) {
+  document.getElementById('res-lel').textContent   = lel_mix.toFixed(3);
+  document.getElementById('res-uel').textContent   = uel_mix.toFixed(3);
+  document.getElementById('res-nex').textContent   = Nex.toFixed(3);
+  document.getElementById('res-o2req').textContent = O2req.toFixed(3);
+  document.getElementById('res-fuel').textContent  = x.toFixed(3);
+  document.getElementById('res-o2c').textContent   = y.toFixed(3);
+  document.getElementById('res-pt').textContent    = pt.toFixed(3);
+
+  drawEllicott(x, y);
+  renderZone(x, y);
+
+  document.getElementById('results-panel').style.display = 'block';
+}
+
+// ── Ellicott chart on <canvas> ──────────────────────────────────────────
+function drawEllicott(fx, fy) {
+  const canvas = document.getElementById('ellicott-chart');
+  const ctx    = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const PAD = 52;
+  const plotW = W - 2 * PAD, plotH = H - 2 * PAD;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#0b0f14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Axis range
+  const RANGE = 15;
+  const toCanvasX = v => PAD + ((v + RANGE) / (2 * RANGE)) * plotW;
+  const toCanvasY = v => PAD + ((RANGE - v) / (2 * RANGE)) * plotH;
+  const cx = toCanvasX(0), cy = toCanvasY(0);
+
+  // ── Quadrant fills ──
+  // Q1: explosive (x≥0, y≥0) — red
+  ctx.fillStyle = 'rgba(220,38,38,0.30)';
+  ctx.fillRect(cx, PAD, W - PAD - cx, cy - PAD);
+
+  // Q2: fuel-lean (x<0, y≥0) — green
+  ctx.fillStyle = 'rgba(22,163,74,0.22)';
+  ctx.fillRect(PAD, PAD, cx - PAD, cy - PAD);
+
+  // Q3: fuel-rich (x<0, y<0) — yellow/amber
+  ctx.fillStyle = 'rgba(202,138,4,0.28)';
+  ctx.fillRect(PAD, cy, cx - PAD, H - PAD - cy);
+
+  // Q4: non-explosive (x≥0, y<0) — blue
+  ctx.fillStyle = 'rgba(37,99,235,0.22)';
+  ctx.fillRect(cx, cy, W - PAD - cx, H - PAD - cy);
+
+  // ── Grid lines ──
+  ctx.strokeStyle = '#1e2d3d';
+  ctx.lineWidth   = 1;
+  for (let v = -12; v <= 12; v += 3) {
+    if (v === 0) continue;
+    // vertical
+    ctx.beginPath();
+    ctx.setLineDash([3, 5]);
+    ctx.moveTo(toCanvasX(v), PAD);
+    ctx.lineTo(toCanvasX(v), H - PAD);
+    ctx.stroke();
+    // horizontal
+    ctx.beginPath();
+    ctx.moveTo(PAD, toCanvasY(v));
+    ctx.lineTo(W - PAD, toCanvasY(v));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // ── Axes ──
+  ctx.strokeStyle = '#556070';
+  ctx.lineWidth   = 1.5;
+  // X axis
+  ctx.beginPath();
+  ctx.moveTo(PAD, cy); ctx.lineTo(W - PAD, cy);
+  ctx.stroke();
+  // Y axis
+  ctx.beginPath();
+  ctx.moveTo(cx, PAD); ctx.lineTo(cx, H - PAD);
+  ctx.stroke();
+
+  // ── Axis labels ──
+  ctx.fillStyle   = '#556070';
+  ctx.font        = '10px "JetBrains Mono", monospace';
+  ctx.textAlign   = 'center';
+
+  for (let v = -12; v <= 12; v += 3) {
+    // X tick labels
+    ctx.fillText(v, toCanvasX(v), H - PAD + 16);
+    // Y tick labels
+    if (v !== 0) {
+      ctx.textAlign = 'right';
+      ctx.fillText(v, PAD - 8, toCanvasY(v) + 4);
+      ctx.textAlign = 'center';
+    }
+  }
+
+  // Axis titles
+  ctx.fillStyle = '#8898aa';
+  ctx.font      = '11px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('← FUEL CONTENT →', W / 2, H - 8);
+
+  ctx.save();
+  ctx.translate(14, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('← OXYGEN CONTENT →', 0, 0);
+  ctx.restore();
+
+  // Quadrant labels
+  ctx.font      = '9px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(232,65,42,0.65)';
+  ctx.textAlign = 'right';
+  ctx.fillText('EXPLOSIVE', W - PAD - 6, PAD + 14);
+
+  ctx.fillStyle = 'rgba(22,163,74,0.7)';
+  ctx.textAlign = 'left';
+  ctx.fillText('FUEL-LEAN', PAD + 6, PAD + 14);
+
+  ctx.fillStyle = 'rgba(202,138,4,0.7)';
+  ctx.textAlign = 'left';
+  ctx.fillText('FUEL-RICH', PAD + 6, H - PAD - 6);
+
+  ctx.fillStyle = 'rgba(85,150,240,0.7)';
+  ctx.textAlign = 'right';
+  ctx.fillText('NON-EXPLOSIVE', W - PAD - 6, H - PAD - 6);
+
+  // ── Clamp plot point to visible area with padding ──
+  const plotX = Math.max(PAD + 6, Math.min(W - PAD - 6, toCanvasX(fx)));
+  const plotY = Math.max(PAD + 6, Math.min(H - PAD - 6, toCanvasY(fy)));
+
+  // Pulse ring
+  ctx.beginPath();
+  ctx.arc(plotX, plotY, 14, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(240,165,0,0.12)';
+  ctx.fill();
+
+  // Crosshairs
+  ctx.strokeStyle = 'rgba(240,165,0,0.3)';
+  ctx.lineWidth   = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(plotX, PAD); ctx.lineTo(plotX, H - PAD);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(PAD, plotY); ctx.lineTo(W - PAD, plotY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dot
+  ctx.beginPath();
+  ctx.arc(plotX, plotY, 7, 0, Math.PI * 2);
+  ctx.fillStyle   = '#f0a500';
+  ctx.fill();
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // Co-ordinate label next to dot
+  ctx.fillStyle  = '#f0a500';
+  ctx.font       = '10px "JetBrains Mono", monospace';
+  ctx.textAlign  = 'left';
+  const labelX   = plotX + 12;
+  const labelY   = plotY - 10;
+  ctx.fillText(`(${fx.toFixed(2)}, ${fy.toFixed(2)})`, labelX, labelY);
+}
+
+// ── Zone classification ─────────────────────────────────────────────────
+const ZONES = {
+  explosive : { cls: 'zone-explosive', title: '🔥 EXPLOSIVE ZONE',              sub: 'Both fuel content and oxygen are above critical thresholds — atmosphere is explosive.' },
+  lean      : { cls: 'zone-lean',      title: '⚠ POTENTIALLY EXPLOSIVE — LEAN', sub: 'Fuel-lean atmosphere. Below LEL but oxygen-rich — any increase in fuel is dangerous.' },
+  rich      : { cls: 'zone-rich',      title: '⚠ POTENTIALLY EXPLOSIVE — RICH', sub: 'Fuel-rich atmosphere. Above UEL but insufficient oxygen — dilution risk.' },
+  safe      : { cls: 'zone-safe',      title: '✅ NON-EXPLOSIVE ZONE',           sub: 'Fuel and oxygen levels are both below critical thresholds. Atmosphere is currently safe.' },
+};
+
+function renderZone(x, y) {
+  let key;
+  if      (x >= 0 && y >= 0) key = 'explosive';
+  else if (x <  0 && y >= 0) key = 'lean';
+  else if (x <  0 && y <  0) key = 'rich';
+  else                        key = 'safe';
+
+  const z   = ZONES[key];
+  const el  = document.getElementById('zone-banner');
+  el.className = 'zone-banner ' + z.cls;
+  document.getElementById('zone-title').textContent = z.title;
+  document.getElementById('zone-sub').textContent   = z.sub;
+}
+</script>
+</body>
+</html>
