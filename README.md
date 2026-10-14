@@ -221,5 +221,5 @@ See `backend/.env.example`. Key ones:
 
 ---
 
-**Built by:** [Your Name]
-**Contact:** [Your Email]
+**Built by:** [Swasti Sundar Nath]
+**Contact:** [nathswasti.aiml@gmail.com]
